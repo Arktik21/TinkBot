@@ -6,11 +6,12 @@ from tinkoff.invest import CandleInterval, Client, InstrumentStatus, RequestErro
 from keys import token
 import pandas as pd
 import pickle
-from tools import cast_money, create_df
-from datetime import datetime, timedelta
+from tools import cast_money, create_df, intervals
+from datetime import datetime, timedelta, timezone
 Status = InstrumentStatus.INSTRUMENT_STATUS_ALL
 import time
 import pytz
+#now = datetime.now(timezone.utc)
 
 utc=pytz.UTC
 
@@ -19,6 +20,10 @@ class Markets:
     def __init__(self, token):
         self.token = token
         self.instruments = dict()
+        self.candle_intervals = [CandleInterval.CANDLE_INTERVAL_5_MIN,
+                                 CandleInterval.CANDLE_INTERVAL_15_MIN,
+                                 CandleInterval.CANDLE_INTERVAL_HOUR,
+                                 CandleInterval.CANDLE_INTERVAL_DAY]
 
     def update_markets(self):
         instruments = dict()
@@ -37,7 +42,8 @@ class Markets:
                         if att.startswith('__') | att.startswith('_'):
                             continue
                         value = getattr(item, att)
-                        if isinstance(value, tinkoff.invest.schemas.MoneyValue) | isinstance(value, tinkoff.invest.schemas.Quotation):
+                        if isinstance(value, tinkoff.invest.schemas.MoneyValue) | \
+                           isinstance(value, tinkoff.invest.schemas.Quotation):
                             value = cast_money(value)
 
                         instr[instrument][item.figi][att] = value
@@ -74,24 +80,49 @@ class Markets:
     #Сбор истории конкретного инструмента (бонды, фьючи, акции итд)
     def collect_history_instrument(self,instrument):
         for item_figi, item in instrument.items():
-            self.collect_history_item(item_figi)
+            self.collect_history_item(item)
 
     #сбор истории конкретной позиции по FIGI
-    def collect_history_item(self, instrument_figi):
-        try:
-            with Client(self.token) as client:
-                r = client.market_data.get_candles(
-                    figi=instrument_figi,
-                    from_=datetime.utcnow() - timedelta(days=7),
-                    to=datetime.utcnow(),
-                    interval=CandleInterval.CANDLE_INTERVAL_HOUR  # см. utils.get_all_candles
-                )
-                # print(r)
+    def collect_history_item(self, instrument):
+        instrument_figi = instrument['figi']
+        item_history = []
+        for load_interval in self.candle_intervals:
+            interval = intervals(load_interval)
 
-                df = create_df(r.candles)
+            candle_history = []
+            for start_interval in interval.deltas:
+                candles = self.collect_candles(instrument_figi=instrument_figi,
+                                               start=start_interval,
+                                               delta=interval.delta,
+                                               candle_interval=interval.interval)
 
-        except RequestError as e:
-            print(str(e))
+                candle_history += candles
+                print(start_interval)
+            item_history.append(candle_history)
+        self.to_pickle(item=item_history,
+                       path='history/'+instrument_figi+'.picle')
+
+
+
+
+    def collect_candles(self,instrument_figi, start, delta, candle_interval):
+        while True:
+            try:
+                with Client(self.token) as client:
+                    r = client.market_data.get_candles(
+                        figi=instrument_figi,
+                        from_=start,
+                        to=start+delta,
+                        interval=candle_interval  # см. utils.get_all_candles
+                    )
+                    time.sleep(1/10)
+                    return create_df(r.candles)
+            except RequestError as e:
+                print(str(e))
+                time.sleep(5)
+                continue
+            break
+
 
 if __name__ == "__main__":
     market = Markets(token.main_ro)
