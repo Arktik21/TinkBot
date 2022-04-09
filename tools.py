@@ -16,7 +16,7 @@ class intervals:
         self.delta = 1
         self.interval = interval
         if interval == CandleInterval.CANDLE_INTERVAL_5_MIN:
-            self.delta = 4
+            self.delta = 8
         if interval == CandleInterval.CANDLE_INTERVAL_15_MIN:
             self.delta = 24
         if interval == CandleInterval.CANDLE_INTERVAL_HOUR:

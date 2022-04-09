@@ -127,5 +127,9 @@ class Markets:
 if __name__ == "__main__":
     market = Markets(token.main_ro)
     #market.update_markets()
-    market.load_markets()
-    market.collect_history_market()
+    #market.load_markets()
+    #market.collect_history_market()
+
+    a = market.from_picle('history/BBG00T22WKV5.picle')
+
+    print(a)
