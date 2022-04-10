@@ -2,6 +2,10 @@ from tinkoff.invest import HistoricCandle
 from tinkoff.invest import Client, CandleInterval
 from datetime import datetime, timedelta, timezone
 import pytz
+import plotly.graph_objects as go
+
+import pandas as pd
+from datetime import datetime
 
 def cast_money(v):
     return v.units + v.nano / 1e9 # nano - 9 нулей
@@ -11,7 +15,7 @@ class intervals:
 
     def __init__(self, interval):
         utc = pytz.UTC
-        total_time = timedelta(days=365*3)
+        total_time = timedelta(days=365*4)
         self.start_time = datetime.utcnow().replace(tzinfo=utc) - total_time
         self.delta = 1
         self.interval = interval
@@ -43,3 +47,16 @@ def create_df(candles : [HistoricCandle]):
     } for c in candles]
 
     return df
+
+
+
+
+df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
+def plot_candles(candles):
+    fig = go.Figure(data=[go.Candlestick(x=candles['time'],
+                    open=candles['open'],
+                    high=candles['High'],
+                    low=candles['Low'],
+                    close=candles['Close'])])
+
+    fig.show()

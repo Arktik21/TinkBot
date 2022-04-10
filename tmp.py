@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
 
 from pandas import DataFrame
-from ta.trend import ema_indicator
+#from ta.trend import ema_indicator
 from tinkoff.invest import Client, RequestError, CandleInterval, HistoricCandle
 
-import creds
+import keys, time
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
+'''''
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
@@ -67,3 +68,27 @@ def cast_money(v):
     :return:
     """
     return v.units + v.nano / 1e9  # nano - 9 нулей
+
+
+'''''
+
+import asyncio
+from datetime import datetime, timedelta
+
+from tinkoff.invest import AsyncClient, CandleInterval
+
+
+async def main():
+    async with AsyncClient(keys.token.main_ro) as client:
+        async for candle in client.get_all_candles(
+            figi="BBG004730N88",
+            from_=datetime.utcnow() - timedelta(days=365),
+            interval=CandleInterval.CANDLE_INTERVAL_DAY,
+        ):
+            print(candle)
+
+
+            time.sleep(1 / 10)
+
+if __name__ == "__main__":
+    asyncio.run(main())
